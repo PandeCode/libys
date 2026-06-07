@@ -1,0 +1,27 @@
+self: let
+  inherit (self.inputs) nixpkgs;
+in
+  system: {
+    default = let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in
+      nixpkgs.legacyPackages.${system}.mkShell {
+        packages = with pkgs; [
+          nh
+          alejandra
+          statix
+          deadnix
+          nixd
+          nix-init
+          nix-index
+          nix-fast-build
+
+          self.packages.${pkgs.system}.default
+        ];
+      };
+
+    # pre-commit = nixpkgs.legacyPackages.${system}.mkShell {
+    #   inherit (self.checks.${system}.pre-commit-check) shellHook;
+    #   buildInputs = self.checks.${system}.pre-commit-check.enabledPackages;
+    # };
+  }
