@@ -26,21 +26,14 @@
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nixutils = {
+      url = "github:PandeCode/nixutils";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    ...
-  } @ inputs: let
-    systems = {
-      x86_64-linux = "x86_64-linux";
-      # aarch64-linux = "aarch64-linux";
-      # x86_64-darwin = "x86_64-darwin";
-      # aarch64-darwin = "aarch64-darwin";
-    };
-    supportedSystems = builtins.attrNames systems;
-    forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+  outputs = {self, ...} @ inputs: let
+    inherit (inputs.nixutils.lib) forAllSystems;
 
     extras =
       self
@@ -58,6 +51,7 @@
       environment = {
         sessionVariables.EDITOR = pkgs.lib.mkDefault "emacs";
         systemPackages = with pkgs; [
+          inputs.self.packages.${pkgs.system}.default
           (aspellWithDicts (dicts: with dicts; [en en-computers en-science es]))
         ];
       };
@@ -65,8 +59,6 @@
     homemanagerModules.default = {pkgs, ...}: {
     };
 
-    # homeConfigurations = (import ./nix/homeConfigurations.nix) extras;
-    # checks = forAllSystems ((import ./nix/checks.nix) extras);
     devShells = forAllSystems ((import ./nix/devShells.nix) extras);
     packages = forAllSystems ((import ./nix/packages.nix) extras);
   };

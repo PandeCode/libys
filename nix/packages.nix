@@ -4,39 +4,8 @@ self: let
 in
   system: let
     pkgs = nixpkgs.legacyPackages.${system};
-    escapeShellArg = pkgs.lib.escapeShellArg;
 
-    wrapProgram = pkg: config: let
-      mkWrapFlags = {
-        envs ? {},
-        args ? [],
-      }: let
-        mkEnvFlag = name: value: [
-          "--prefix"
-          name
-          ":"
-          value
-        ];
-
-        envFlags = pkgs.lib.flatten (pkgs.lib.mapAttrsToList mkEnvFlag envs);
-        argFlags = pkgs.lib.concatMap (arg: ["--add-flags" arg]) args;
-      in
-        envFlags ++ argFlags;
-    in
-      pkgs.symlinkJoin {
-        name = "${pkg.pname or pkg.name}-wrapped";
-        paths = [pkg];
-        nativeBuildInputs = [pkgs.makeWrapper];
-        postBuild = let
-          program = pkg.meta.mainProgram or (pkg.pname or pkg.name);
-          flags = mkWrapFlags {
-            envs = config.envs or {};
-            args = config.args or [];
-          };
-        in ''
-          wrapProgram $out/bin/${program} ${pkgs.lib.escapeShellArgs flags}
-        '';
-      };
+    inherit (inputs.nixutils.pkgLib pkgs) wrapProgram;
 
     # emacs = inputs.emacs-overlay.packages.${pkgs.system}.emacs-git;
     emacs = pkgs.emacs-pgtk;
@@ -119,7 +88,6 @@ in
         ++ lldbTools;
 
       web = with pkgs; [
-        bun
         vscode-langservers-extracted
         typescript-language-server
         eslint
@@ -176,46 +144,62 @@ in
             #   packageRequires = packages;
             # })
 
-            magit
-            evil
+            base16-theme
 
+            magit
+            vterm
+
+            vertico
+            mini-frame
+            marginalia
+
+            evil
+            general
             which-key
 
-            consult
+            lsp-bridge
+            markdown-mode
+            yasnippet
 
-            doom-themes
+            nix-mode
 
-            vterm
+            parinfer-rust-mode
+
+            zig-mode
+            rust-mode
+
+            # ghc-mode
+            dante
           ]
       )) {
-        args = ["--init-directory" ./..];
+        name = "emacs";
+        # args = ["--init-directory" ./..];
+        args = ["--init-directory" "~/libys/"];
         envs = {
-          PATH = pkgs.lib.makeBinPath packages;
+          prefix = {
+            PATH = pkgs.lib.makeBinPath packages;
+          };
+          set =
+            profileEnv;
         };
       };
 
     # editor variants
     editors = let
-      lldbEnv = [
-        "--set"
-        "CODELLDB_PATH"
-        "${pkgs.vscode-extensions.vadimcn.vscode-lldb}/share/vscode/extensions/vadimcn.vscode-lldb/adapter/codelldb"
-        "--set"
-        "LIBLLDB_PATH"
-        "${pkgs.vscode-extensions.vadimcn.vscode-lldb}/share/vscode/extensions/vadimcn.vscode-lldb/lldb/lib/liblldb.so"
-      ];
-      rustEnv = [
-        "--set"
-        "RUST_SRC_PATH"
-        "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}"
-      ];
+      lldbEnv = {
+        CODELLDB_PATH = "${pkgs.vscode-extensions.vadimcn.vscode-lldb}/share/vscode/extensions/vadimcn.vscode-lldb/adapter/codelldb";
+        LIBLLDB_PATH = "${pkgs.vscode-extensions.vadimcn.vscode-lldb}/share/vscode/extensions/vadimcn.vscode-lldb/lldb/lib/liblldb.so";
+      };
+      rustEnv = {
+        RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+      };
     in {
-      full = mkEditor "full" profiles.full (lldbEnv ++ rustEnv);
+      full = mkEditor "full" profiles.full (lldbEnv // rustEnv);
       minimal = mkEditor "minimal" profiles.minimal [];
 
       python = mkEditor "python" profiles.python [];
 
-      rust = mkEditor "rust" profiles.rust (lldbEnv ++ rustEnv);
+      rust = mkEditor "rust" profiles.rust (lldbEnv // rustEnv);
       cxx = mkEditor "cxx" profiles.cxx lldbEnv;
       go = mkEditor "go" profiles.go lldbEnv;
       web = mkEditor "web" profiles.web lldbEnv;

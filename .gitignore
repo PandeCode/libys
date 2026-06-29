@@ -1,3 +1,6 @@
 .direnv
 
 eln-cache
+auto-save-list/
+tramp
+tutorial/
