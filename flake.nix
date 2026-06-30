@@ -24,7 +24,7 @@
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nixutils";
     };
     nixutils = {
       url = "github:PandeCode/nixutils";
