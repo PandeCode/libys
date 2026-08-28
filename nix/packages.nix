@@ -170,6 +170,8 @@ in
 
             # ghc-mode
             dante
+
+            ledger-mode
           ]
       )) {
         name = "emacs";
