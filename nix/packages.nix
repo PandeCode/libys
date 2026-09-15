@@ -94,7 +94,7 @@ in
         tailwindcss-language-server
         emmet-ls
         mermaid-cli
-        wasm-language-tools
+        # wasm-language-tools
       ];
 
       fun = with pkgs;
