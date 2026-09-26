@@ -63,7 +63,7 @@
 
 ; (set lsp-bridge-enable-inlay-hint t)
 
-(load "~/libys/keybinds.el" nil t t)
+(load (expand-file-name "keybinds.el" user-emacs-directory) nil t t)
 
 ; https://github.com/justinbarclay/parinfer-rust-mode
 (require 'parinfer-rust-mode)

@@ -1,65 +1,33 @@
 {
   description = "my take on emacs";
 
+  # lets people who use libys download it instead of building it
   nixConfig = {
-    trusted-users = ["root" "shawn"];
-    experimental-features = ["nix-command" "flakes" "pipe-operators"];
-    accept-flake-config = true;
-    show-trace = true;
-    auto-optimise-store = true;
-
-    # substituters = ["https://aseipp-nix-cache.freetls.fastly.net"];
-
-    extra-substituters = [
-      "https://charon.cachix.org"
-      "https://nix-community.cachix.org"
-    ];
+    extra-substituters = [ "https://charon.cachix.org" ];
     extra-trusted-public-keys = [
       "charon.cachix.org-1:epdetEs1ll8oi8DT8OG2jEA4whj3FDbqgPFvapEPbY8="
-      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
     ];
   };
 
+  outputs = inputs: import ./flake inputs;
+
   inputs = {
-    nixpkgs.url = "https://channels.nixos.org/nixos-unstable/nixexprs.tar.zst";
-    emacs-overlay = {
-      url = "github:nix-community/emacs-overlay";
-      inputs.nixpkgs.follows = "nixutils";
+    # the shared nixpkgs pin
+    nixpkgs.follows = "nixbuilds/nixpkgs";
+
+    # my packages and the language toolsets
+    nixbuilds = {
+      type = "github";
+      owner = "PandeCode";
+      repo = "nixbuilds";
     };
+
+    # my lib and the shared formatter config
     nixutils = {
-      url = "github:PandeCode/nixutils";
+      type = "github";
+      owner = "PandeCode";
+      repo = "nixutils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-  };
-
-  outputs = {self, ...} @ inputs: let
-    inherit (inputs.nixutils.lib) forAllSystems;
-
-    extras =
-      self
-      // {
-        overlays = (import ./nix/overlays.nix) inputs;
-      };
-  in {
-    nix.nixPath = ["nixpkgs=${inputs.nixpkgs}"];
-
-    nixosModules.default = {pkgs, ...}: {
-      # services.emacs = {
-      #   enable = true;
-      #   defaultEditor = true;
-      # };
-      environment = {
-        sessionVariables.EDITOR = pkgs.lib.mkDefault "emacs";
-        systemPackages = with pkgs; [
-          inputs.self.packages.${pkgs.system}.default
-          (aspellWithDicts (dicts: with dicts; [en en-computers en-science es]))
-        ];
-      };
-    };
-    homemanagerModules.default = {pkgs, ...}: {
-    };
-
-    devShells = forAllSystems ((import ./nix/devShells.nix) extras);
-    packages = forAllSystems ((import ./nix/packages.nix) extras);
   };
 }
