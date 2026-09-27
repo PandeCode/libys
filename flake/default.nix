@@ -41,6 +41,7 @@ in
       editor = import ../nix/editor.nix {
         inherit pkgs;
         inherit (nixutils.lib) wrapProgram;
+        src = self;
       };
     in
     nixpkgs.lib.attrsets.genAttrs profiles (profile: editor.override { inherit profile; })

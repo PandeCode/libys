@@ -1,6 +1,10 @@
-# builds libys: emacs with my packages and the tools of one profile from
-# nixbuilds' toolsets
-{ pkgs, wrapProgram }:
+# builds libys: emacs with my packages, this config and the tools of one
+# profile from nixbuilds' toolsets
+{
+  pkgs,
+  wrapProgram,
+  src,
+}:
 
 let
   inherit (pkgs) lib;
@@ -67,20 +71,65 @@ let
     {
       # one of the profiles in nixbuilds' toolsets
       profile ? "full",
-      # emacs writes caches here, so it has to be a writable directory
-      initDirectory ? "~/libys",
+      # nix expressions nixd evaluates for option completion
+      nixd ? { },
     }:
-    wrapProgram pkgs withPackages {
+    let
+      # lsp-bridge reads <server>.json from lsp-bridge-user-langserver-dir
+      nixdServer = {
+        name = "nixd";
+        languageId = "nix";
+        command = [ "nixd" ];
+        settings.nixd = {
+          nixpkgs.expr = "import ${pkgs.path} { }";
+          options = lib.attrsets.mapAttrs (_: expr: { inherit expr; }) nixd;
+        };
+      };
+
+      langservers = pkgs.writeTextFile {
+        name = "libys-langservers";
+        destination = "/nixd.json";
+        text = builtins.toJSON nixdServer;
+      };
+
+      # the config stays in the store; what emacs writes goes to
+      # ~/.local/share/libys, like NVIM_APPNAME does for hermes
+      initDirectory = pkgs.linkFarm "libys-init" {
+        "early-init.el" = pkgs.writeText "early-init.el" ''
+          (setq libys-directory "${src}/")
+          (setq libys-nix-profile "${profile}")
+          (setq libys-nix-langserver-dir "${langservers}")
+
+          (setq user-emacs-directory
+                (expand-file-name "libys/" (or (getenv "XDG_DATA_HOME") "~/.local/share")))
+          (setq auto-save-list-file-prefix
+                (expand-file-name "auto-save-list/.saves-" user-emacs-directory))
+          (startup-redirect-eln-cache (expand-file-name "eln-cache/" user-emacs-directory))
+
+          (load (expand-file-name "early-init.el" libys-directory) nil t t)
+        '';
+
+        "init.el" = pkgs.writeText "init.el" ''
+          (load (expand-file-name "init.el" libys-directory) nil t t)
+        '';
+      };
+    in
+    (wrapProgram pkgs withPackages {
       name = "emacs";
       args = [
         "--init-directory"
-        initDirectory
+        "${initDirectory}"
       ];
       envs = {
         prefix.PATH = lib.strings.makeBinPath pkgs.toolsets.profiles.${profile};
         set = profileEnv.${profile} or { };
       };
-    };
+    }).overrideAttrs
+      (old: {
+        passthru = old.passthru or { } // {
+          inherit initDirectory nixdServer;
+        };
+      });
 in
 
 lib.customisation.makeOverridable mkEditor { }

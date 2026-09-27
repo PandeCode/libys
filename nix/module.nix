@@ -51,19 +51,28 @@ in
       description = "Which language tools come with the editor.";
     };
 
-    initDirectory = mkOption {
-      type = types.str;
-      default = "~/libys";
-      description = ''
-        A clone of libys. Emacs loads the config from here and writes its
-        caches here, so it has to be writable.
-      '';
+    nixd = {
+      nixos = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = ''(builtins.getFlake "/home/me/dotnix").nixosConfigurations.laptop.options'';
+        description = "Nix expression nixd evaluates for NixOS option completion.";
+      };
+
+      home-manager = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Nix expression nixd evaluates for home-manager option completion.";
+      };
     };
 
     package = mkOption {
       type = types.package;
-      default = editor.override { inherit (cfg) profile initDirectory; };
-      defaultText = lib.literalExpression "libys built from profile and initDirectory";
+      default = editor.override {
+        inherit (cfg) profile;
+        nixd = lib.attrsets.filterAttrs (_: v: v != null) cfg.nixd;
+      };
+      defaultText = lib.literalExpression "libys built from profile and nixd";
       description = "The editor package.";
     };
 

@@ -1,5 +1,8 @@
 ;;; init.el --- My emacs config  -*- lexical-binding:t; coding:utf-8 -*-
 
+;; set by the nix wrapper; this default is for running from a clone
+(defvar libys-directory (file-name-directory (or load-file-name buffer-file-name)))
+
 (setq read-process-output-max (* 1024 1024)) ;; 1mb
 (setq display-fill-column-indicator-column 80)
 (global-display-fill-column-indicator-mode 1)
@@ -16,7 +19,7 @@
 (setopt create-lockfiles nil)               ;; Don't create .# files
 (setopt make-backup-files t)                ;; Keep backup files
 (setopt backup-directory-alist
-        '(("." . "~/.emacs.d/backups")))    ;; Store backups in one place
+        `(("." . ,(expand-file-name "backups/" user-emacs-directory))))
 
 (setopt scroll-conservatively 101)          ;; Smooth scrolling
 (setopt mouse-wheel-scroll-amount '(1))     ;; One line per scroll
@@ -59,16 +62,18 @@
 (yas-global-mode 1)
 
 (require 'lsp-bridge)
+(when (boundp 'libys-nix-langserver-dir)
+  (setq lsp-bridge-user-langserver-dir libys-nix-langserver-dir))
 (global-lsp-bridge-mode)
 
 ; (set lsp-bridge-enable-inlay-hint t)
 
-(load (expand-file-name "keybinds.el" user-emacs-directory) nil t t)
+(load (expand-file-name "keybinds.el" libys-directory) nil t t)
 
 ; https://github.com/justinbarclay/parinfer-rust-mode
 (require 'parinfer-rust-mode)
 
-(add-hook 'emacs-lisp-mode 'parinfer-rust-mode)
+(add-hook 'emacs-lisp-mode-hook 'parinfer-rust-mode)
 (define-key parinfer-rust-mode-map (kbd "C-c C-p t") #'parinfer-rust-toggle-paren-mode)
 (define-key parinfer-rust-mode-map (kbd "C-c C-p s") #'parinfer-rust-switch-mode)
 (define-key parinfer-rust-mode-map (kbd "C-c C-p d") #'parinfer-rust-toggle-disable)
